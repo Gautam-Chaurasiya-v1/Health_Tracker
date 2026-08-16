@@ -45,10 +45,12 @@
 - [ ] Deleting a media record also deletes the file from the filesystem.
 
 ### Progress Timeline
-- [ ] Dedicated screen: paginated list of progress photos in reverse chronological order.
-- [ ] Each card: date, bodyweight (if logged that day), photo thumbnail.
-- [ ] Side-by-side comparison: user can select two dates and view photos split-screen.
-- [ ] Filter by pose type (front / side / back).
+- [x] Dedicated screen: paginated list of progress photos in reverse chronological order.
+- [x] Date Navigation: `◀ Date ▶` header allowing users to view photos for a specific date or toggle "All Photos (Timeline)".
+- [x] Each card: date, pose label, photo thumbnail with delete action.
+- [x] Deletion: User can permanently delete progress photos with alert confirmation.
+- [x] Side-by-side comparison: user can select two photos and view photos in ProgressComparison.
+- [x] Filter by pose type (front / side / back).
 
 ---
 

@@ -38,6 +38,7 @@ Once started, open your browser at:
 
 - **🏋️ Workout Engine (Dev A)**:
   - Fast 3-tap set logging (Weight, Reps, RIR 0–5).
+  - Day-by-day date navigation (`◀ Date ▶`) to view and log past/current workouts.
   - Ability to delete mistakenly logged sets with immediate ghost cache recalculation.
   - Seeded exercise library with custom exercise creation and deletion.
   - Ghost performance banner with reactive previous-session targets.
@@ -53,8 +54,12 @@ Once started, open your browser at:
 - **📸 Local Media Pipeline & Progress Photos (Dev B)**:
   - Camera capture and gallery photo selection with automatic compression.
   - Strict storage protection (<500MB warning, <100MB block).
-  - Body progress timeline with pose filtering (`Front`, `Side`, `Back`) and photo deletion.
+  - Body progress timeline with date navigation (`◀ Date ▶`), pose filtering (`Front`, `Side`, `Back`), and photo deletion.
   - Side-by-side split-screen comparison mode for visual transformation tracking.
+
+- **🎨 Modern OLED Minimalist UI Design System**:
+  - Deep Zinc & True Black backgrounds with high-contrast typography.
+  - Modern electric Indigo accent colors, smooth component curvatures, and refined button elevation.
 
 - **💾 Data Backup, Export & Restore (Dev B)**:
   - Full local JSON database backup and sharing / browser download.
@@ -94,7 +99,7 @@ From inside the `mobile/` directory:
 
 ## 🧪 Running Automated Tests
 
-Run the complete Jest unit and component test suite (**27 suites, 117 tests — 100% passing**):
+Run the complete Jest unit and component test suite (**27 suites, 124 tests — 100% passing**):
 
 ```bash
 cd mobile

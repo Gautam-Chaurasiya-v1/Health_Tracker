@@ -19,12 +19,18 @@
 
 ## Acceptance Criteria
 
+### Date Navigation & History Browsing
+- [x] Date header with previous (`◀`) and next (`▶`) buttons allowing users to view any day's workout log.
+- [x] If a session exists for the selected date, loads and displays the session, logged exercises, and sets.
+- [x] If no session exists for the selected date, displays an empty state with a "Start Workout" button to create and log a session on that specific date.
+
 ### Session Management
-- [ ] User can create a new session with `client_uuid`, `date`, `started_at`.
-- [ ] Session `date` defaults to today's date.
-- [ ] Session written to WatermelonDB immediately on creation.
-- [ ] User can finish a session (sets `finished_at`).
-- [ ] User can view past sessions (paginated local WatermelonDB query, ordered by date desc).
+- [x] User can create a new session with `client_uuid`, `date`, `started_at`.
+- [x] Session `date` defaults to today's date or the currently selected date in the date navigator.
+- [x] Session written to WatermelonDB immediately on creation.
+- [x] User can finish a session (sets `finished_at`).
+- [x] User can delete a session (permanently removes session, cascade-deletes related exercise entries and sets).
+- [x] User can view past sessions in Workout History (paginated local WatermelonDB query, ordered by date desc).
 
 ### Exercise Entry
 - [ ] User can add an exercise to a session from the Exercise Library screen.

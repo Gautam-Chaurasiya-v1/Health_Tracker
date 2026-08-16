@@ -1,0 +1,22 @@
+[
+  { "name": "Barbell Back Squat",    "muscle_group": "quads",      "equipment": "barbell"    },
+  { "name": "Romanian Deadlift",     "muscle_group": "hamstrings", "equipment": "barbell"    },
+  { "name": "Barbell Bench Press",   "muscle_group": "chest",      "equipment": "barbell"    },
+  { "name": "Incline Dumbbell Press","muscle_group": "chest",      "equipment": "dumbbell"   },
+  { "name": "Barbell Row",           "muscle_group": "back",       "equipment": "barbell"    },
+  { "name": "Lat Pulldown",          "muscle_group": "back",       "equipment": "cable"      },
+  { "name": "Overhead Press",        "muscle_group": "shoulders",  "equipment": "barbell"    },
+  { "name": "Lateral Raise",         "muscle_group": "shoulders",  "equipment": "dumbbell"   },
+  { "name": "Barbell Curl",          "muscle_group": "biceps",     "equipment": "barbell"    },
+  { "name": "Tricep Pushdown",       "muscle_group": "triceps",    "equipment": "cable"      },
+  { "name": "Leg Press",             "muscle_group": "quads",      "equipment": "machine"    },
+  { "name": "Leg Curl",              "muscle_group": "hamstrings", "equipment": "machine"    },
+  { "name": "Calf Raise",            "muscle_group": "calves",     "equipment": "machine"    },
+  { "name": "Pull Up",               "muscle_group": "back",       "equipment": "bodyweight" },
+  { "name": "Dip",                   "muscle_group": "triceps",    "equipment": "bodyweight" },
+  { "name": "Cable Fly",             "muscle_group": "chest",      "equipment": "cable"      },
+  { "name": "Face Pull",             "muscle_group": "rear_delt",  "equipment": "cable"      },
+  { "name": "Hack Squat",            "muscle_group": "quads",      "equipment": "machine"    },
+  { "name": "Hip Thrust",            "muscle_group": "glutes",     "equipment": "barbell"    },
+  { "name": "Seated Cable Row",      "muscle_group": "back",       "equipment": "cable"      }
+]

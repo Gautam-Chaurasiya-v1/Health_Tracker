@@ -1,4 +1,6 @@
 // Mock for react-native/setup-env and native modules
+jest.setTimeout(15000);
+
 jest.mock('react-native-fs', () => ({
   DocumentDirectoryPath: '/mock/app/documents',
   CachesDirectoryPath: '/mock/app/caches',

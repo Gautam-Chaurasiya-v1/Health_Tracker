@@ -52,7 +52,7 @@ Why this decision was made: [`docs/specs/decisions/ADR-001-local-first-v1.md`](d
 
 | Layer | Technology | Notes |
 |-------|-----------|-------|
-| Framework | React Native (Expo) | Managed workflow |
+| Framework | React Native (Expo) | Managed workflow + `expo-dev-client` (for native modules) |
 | Local DB | WatermelonDB (SQLite) | ALL data stored here |
 | State | Zustand | UI and local state |
 | Navigation | React Navigation | Bottom tabs |
@@ -124,6 +124,10 @@ shared/types/                        ← Entity types + enums (entities.ts, enum
 - **Debounce** all rapid-tap entry points (e.g., "+ Set" confirm button: 300ms debounce).
 - **Component tests** target ≥ 75% coverage (React Native Testing Library).
 - **Never commit** directly to `main`. Always use a feature branch.
+- **Never import gallery videos** in V1 media flows. Only camera-recorded videos are permitted.
+- **Always check available storage** before any media capture: warn at <500MB free, block capture at <100MB free.
+- **Compress all media** before writing to filesystem — never store raw camera output. Use `react-native-compressor` for both photos and videos.
+- **Batch WatermelonDB imports** in groups of 100 records using `database.batch()` to prevent UI jank on large restores.
 
 ---
 
@@ -155,3 +159,35 @@ shared/types/                        ← Entity types + enums (entities.ts, enum
 | Create JWT tokens, password hashing, or auth middleware | Auth is V2 — not needed in V1 |
 | Modify `docs/specs/v2/` specs during V1 development | V2 specs are frozen during V1 phase |
 | Write to `shared/types/` without both developers agreeing | Coordinate before changing shared types |
+| Import videos from device gallery | Only camera-recorded videos allowed in V1 |
+| Store raw (uncompressed) camera output | Always compress via `react-native-compressor` first |
+| `npm install` Expo native packages | Use `npx expo install` to get version-compatible packages |
+
+---
+
+## 10. Commit Message Conventions (Agentic Coding)
+
+Use this format for all commits to maintain a traceable, rollback-friendly history:
+
+| Prefix | When to Use | Example |
+|--------|------------|---------|
+| `feat(devb):` | New feature implementation | `feat(devb): add MacroProgressBar component` |
+| `test(devb):` | Adding or updating tests | `test(devb): add useDietStore unit tests` |
+| `fix(devb):` | Bug fixes in Dev B domain | `fix(devb): correct calorie auto-calc formula` |
+| `feat(deva):` | New feature (Dev A domain) | `feat(deva): implement set logging flow` |
+| `chore:` | Setup, config, scaffolding | `chore: init Expo project and navigation` |
+| `docs:` | Documentation updates | `docs: update AGENTS.md with media rules` |
+| `refactor(devb):` | Refactoring without behavior change | `refactor(devb): extract macro calc to util` |
+
+**Rules:**
+- **One logical change per commit.** Never bundle a feature implementation and its tests in the same commit.
+- **Reference the spec** in the commit body when implementing a spec requirement:
+  ```
+  feat(devb): add MealEntryCard with condition chip selection
+
+  Refs: docs/specs/v1/features/macro-tracker.spec.md
+  ```
+- **Tag after every PR merge:** `git tag devb-feature-<name>-complete` — this is the rollback point.
+- **Always branch from fresh main:** `git checkout main && git pull` before creating any new feature branch.
+- **Broken branch recovery:** If a feature branch is broken beyond repair, `git checkout main` and open a new branch with a `-v2` suffix (e.g., `feature/devb-media-pipeline-v2`).
+- **Use `npx expo install`** (not `npm install`) for all Expo/React Native packages to ensure version compatibility.

@@ -94,7 +94,7 @@ From inside the `mobile/` directory:
 
 ## 🧪 Running Automated Tests
 
-Run the complete Jest unit and component test suite (**27 suites, 113 tests — 100% passing**):
+Run the complete Jest unit and component test suite (**27 suites, 117 tests — 100% passing**):
 
 ```bash
 cd mobile

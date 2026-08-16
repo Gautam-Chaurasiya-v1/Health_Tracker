@@ -37,15 +37,25 @@ export function createDatabase(useMemory = false): Database {
     return new Database({ adapter, modelClasses });
   }
 
-  const adapter = new SQLiteAdapter({
-    schema,
-    jsi: false,
-    onSetUpError: (error) => {
-      console.error('WatermelonDB SQLite setup error:', error);
-    },
-  });
+  try {
+    const adapter = new SQLiteAdapter({
+      schema,
+      jsi: false,
+      onSetUpError: (error) => {
+        console.warn('WatermelonDB SQLite setup warning, falling back to LokiJS:', error);
+      },
+    });
 
-  return new Database({ adapter, modelClasses });
+    return new Database({ adapter, modelClasses });
+  } catch (err) {
+    console.warn('Native SQLiteAdapter not available in Expo Go, using LokiJS fallback adapter:', err);
+    const adapter = new LokiJSAdapter({
+      schema,
+      useWebWorker: false,
+      useIncrementalIndexedDB: false,
+    });
+    return new Database({ adapter, modelClasses });
+  }
 }
 
 export const database = createDatabase();

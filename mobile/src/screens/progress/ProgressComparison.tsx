@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
-import RNFS from 'react-native-fs';
 import { RootStackParamList } from '../../navigation/types';
 import { database } from '../../db';
 import MediaRecord from '../../db/models/MediaRecord';
@@ -17,6 +16,7 @@ import DietLog from '../../db/models/DietLog';
 import { colors, spacing, typography } from '../../theme';
 import { Header } from '../../components/common';
 import { format } from 'date-fns';
+import { getFullMediaUri } from '../../utils/mediaUri';
 
 type RouteProps = RouteProp<RootStackParamList, 'ProgressComparison'>;
 
@@ -71,7 +71,7 @@ export const ProgressComparison: React.FC = () => {
 
         setPhotoA({
           id: recA.id,
-          localUri: recA.localUri ? `file://${RNFS.DocumentDirectoryPath}/${recA.localUri}` : '',
+          localUri: getFullMediaUri(recA.localUri) || '',
           poseType: recA.poseType,
           dateStr: recA.createdAt ? format(new Date(recA.createdAt), 'MMM d, yyyy') : '',
           bodyWeight: weightA,
@@ -80,7 +80,7 @@ export const ProgressComparison: React.FC = () => {
 
         setPhotoB({
           id: recB.id,
-          localUri: recB.localUri ? `file://${RNFS.DocumentDirectoryPath}/${recB.localUri}` : '',
+          localUri: getFullMediaUri(recB.localUri) || '',
           poseType: recB.poseType,
           dateStr: recB.createdAt ? format(new Date(recB.createdAt), 'MMM d, yyyy') : '',
           bodyWeight: weightB,

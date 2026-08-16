@@ -7,11 +7,11 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
-import RNFS from 'react-native-fs';
 import { MediaRecordEntity } from '../../../../shared/types/entities';
 import { colors, spacing, typography } from '../../theme';
 import { Card } from '../common';
 import { format } from 'date-fns';
+import { getFullMediaUri } from '../../utils/mediaUri';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - spacing.md * 3) / 2;
@@ -35,9 +35,7 @@ export const ProgressPhotoCard: React.FC<ProgressPhotoCardProps> = ({
   onPress,
   testID,
 }) => {
-  const fullLocalUri = media.local_uri
-    ? `file://${RNFS.DocumentDirectoryPath}/${media.local_uri}`
-    : null;
+  const fullLocalUri = getFullMediaUri(media.local_uri);
 
   const formattedDate = media.created_at
     ? format(new Date(media.created_at), 'MMM d, yyyy')

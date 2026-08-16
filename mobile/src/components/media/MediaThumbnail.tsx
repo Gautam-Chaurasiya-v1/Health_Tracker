@@ -8,11 +8,11 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import RNFS from 'react-native-fs';
 import { MediaRecordEntity } from '../../../../shared/types/entities';
 import { MediaType } from '../../../../shared/types/enums';
 import { colors, spacing, typography } from '../../theme';
 import { Button } from '../common';
+import { getFullMediaUri } from '../../utils/mediaUri';
 
 interface MediaThumbnailProps {
   media: MediaRecordEntity;
@@ -29,9 +29,7 @@ export const MediaThumbnail: React.FC<MediaThumbnailProps> = ({
 }) => {
   const [fullscreenVisible, setFullscreenVisible] = useState(false);
 
-  const fullLocalUri = media.local_uri
-    ? `file://${RNFS.DocumentDirectoryPath}/${media.local_uri}`
-    : null;
+  const fullLocalUri = getFullMediaUri(media.local_uri);
 
   const handleDelete = () => {
     Alert.alert('Delete Media', 'Are you sure you want to permanently delete this media?', [

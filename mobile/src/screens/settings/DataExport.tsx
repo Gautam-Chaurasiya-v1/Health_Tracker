@@ -9,7 +9,6 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
-import RNFS from 'react-native-fs';
 import { colors, spacing, typography } from '../../theme';
 import { Header, Card, Button } from '../../components/common';
 import {
@@ -18,6 +17,7 @@ import {
   estimateBackupSize,
 } from '../../utils/exportService';
 import { validateBackupJSON, restoreBackup } from '../../utils/importService';
+import { readTextFile } from '../../utils/fileReader';
 
 export const DataExport: React.FC = () => {
   const [estimatedSize, setEstimatedSize] = useState<string>('Calculating...');
@@ -69,7 +69,7 @@ export const DataExport: React.FC = () => {
       }
 
       const fileUri = doc.assets[0].uri;
-      const fileContent = await RNFS.readFile(fileUri.replace('file://', ''), 'utf8');
+      const fileContent = await readTextFile(fileUri, doc.assets[0].file);
 
       const validation = validateBackupJSON(fileContent);
       if (!validation.valid) {

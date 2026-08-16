@@ -5,9 +5,8 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^react-native/setup-env$': '<rootDir>/jest/setup-env.js',
-    '^test-renderer$': '<rootDir>/node_modules/react-test-renderer',
-    '^test-renderer/(.*)$': '<rootDir>/node_modules/react-test-renderer/$1',
   },
+  setupFiles: ['<rootDir>/jest/setup-env.js'],
   setupFilesAfterEnv: ['@testing-library/jest-native/extend-expect'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   collectCoverageFrom: [

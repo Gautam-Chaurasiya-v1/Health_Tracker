@@ -164,5 +164,37 @@ describe('useWorkoutStore', () => {
     const entryExists = await database.get<ExerciseEntry>('exercise_entries').query().fetch();
     expect(entryExists.find((e) => e.id === entryId)).toBeUndefined();
   });
+
+  it('selectedDate defaults to today and setSelectedDate updates it', async () => {
+    const today = new Date().toISOString().split('T')[0];
+    expect(useWorkoutStore.getState().selectedDate).toBe(today);
+
+    await useWorkoutStore.getState().setSelectedDate('2026-08-10');
+    expect(useWorkoutStore.getState().selectedDate).toBe('2026-08-10');
+  });
+
+  it('loadSessionForDate() finds existing session for the requested date', async () => {
+    const targetDate = '2026-08-12';
+    const sessionId = await useWorkoutStore.getState().startSession(targetDate);
+    const entryId = await useWorkoutStore.getState().addExerciseEntry(sessionId, 'ex-date-test');
+
+    // Deselect active session
+    useWorkoutStore.getState().setActiveSessionId(null);
+    expect(useWorkoutStore.getState().activeSessionId).toBeNull();
+
+    // Now load for date
+    const session = await useWorkoutStore.getState().loadSessionForDate(targetDate);
+    expect(session).toBeDefined();
+    expect(session?.id).toBe(sessionId);
+    expect(useWorkoutStore.getState().activeSessionId).toBe(sessionId);
+    expect(useWorkoutStore.getState().activeExerciseEntryId).toBe(entryId);
+  });
+
+  it('loadSessionForDate() sets activeSessionId to null when no session exists', async () => {
+    await useWorkoutStore.getState().setSelectedDate('2025-01-01');
+    const session = await useWorkoutStore.getState().loadSessionForDate('2025-01-01');
+    expect(session).toBeNull();
+    expect(useWorkoutStore.getState().activeSessionId).toBeNull();
+  });
 });
 

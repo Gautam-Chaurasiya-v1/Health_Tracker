@@ -9,6 +9,7 @@ import { WorkoutCondition } from '../../../../shared/types/enums';
 describe('WorkoutLogger Screen', () => {
   beforeEach(async () => {
     useWorkoutStore.getState().reset();
+    await useWorkoutStore.getState().startSession();
   });
 
   it('Renders current exercise title and select button', async () => {
@@ -67,6 +68,42 @@ describe('WorkoutLogger Screen', () => {
 
     await waitFor(() => {
       expect(useWorkoutStore.getState().activeSessionId).toBeNull();
+    });
+  });
+
+  it('Renders date navigation bar with prev and next buttons', async () => {
+    const { getByTestId } = render(<WorkoutLogger />);
+    expect(getByTestId('date-display')).toBeTruthy();
+    expect(getByTestId('prev-date-btn')).toBeTruthy();
+    expect(getByTestId('next-date-btn')).toBeTruthy();
+  });
+
+  it('Navigating to previous day calls setSelectedDate and updates date display', async () => {
+    const { getByTestId } = render(<WorkoutLogger />);
+    const prevBtn = getByTestId('prev-date-btn');
+
+    fireEvent.press(prevBtn);
+
+    await waitFor(() => {
+      expect(getByTestId('date-display')).toBeTruthy();
+    });
+  });
+
+  it('Displays empty state and Start Workout button when viewing date with no workout', async () => {
+    await useWorkoutStore.getState().setSelectedDate('2024-01-01');
+
+    const { getByTestId, getByText } = render(<WorkoutLogger />);
+
+    await waitFor(() => {
+      expect(getByTestId('no-workout-empty-state')).toBeTruthy();
+      expect(getByText('Start Workout')).toBeTruthy();
+    });
+
+    const startBtn = getByTestId('start-workout-for-date-btn');
+    fireEvent.press(startBtn);
+
+    await waitFor(() => {
+      expect(useWorkoutStore.getState().activeSessionId).toBeTruthy();
     });
   });
 });

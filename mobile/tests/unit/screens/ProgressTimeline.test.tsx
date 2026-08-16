@@ -72,4 +72,11 @@ describe('ProgressTimeline Screen', () => {
     fireEvent.press(getByTestId('pose-filter-front'));
     expect(useMediaStore.getState().selectedPoseFilter).toBe(PoseType.Front);
   });
+
+  it('renders date navigation controls on ProgressTimeline', () => {
+    const { getByTestId } = render(<ProgressTimeline />);
+    expect(getByTestId('date-display')).toBeTruthy();
+    expect(getByTestId('prev-date-btn')).toBeTruthy();
+    expect(getByTestId('next-date-btn')).toBeTruthy();
+  });
 });

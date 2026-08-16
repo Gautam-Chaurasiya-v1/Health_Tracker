@@ -165,3 +165,15 @@ Every PR must include in its description:
 - ❌ Never use `// @ts-ignore` or `/* eslint-disable */`
 - ❌ Never commit `.env` files, API keys, or device paths
 - ❌ Never delete or rename columns in `db/schema.js` without a migration — this corrupts existing users' data
+
+---
+
+## 11. Agent Bug Fix & Verification Logging Rule
+
+> [!IMPORTANT]
+> **Mandatory Bug Resolution Documentation Rule**
+> Every time an AI agent solves a bug and verifies that it is fixed (or when the user confirms the fix / moves to an unrelated task):
+> 1. **Document the Action**: Log the exact root cause, action taken, and files modified in the project documentation ([walkthrough.md](walkthrough.md) and relevant docs under `docs/`).
+> 2. **Run Full Test Suite**: Ensure all unit and integration tests are 100% passing (`npm test`).
+> 3. **Commit and Sync**: Commit with conventional prefix (`fix(devb): ...` / `fix(deva): ...` / `docs: ...`) and sync to the main development branch.
+

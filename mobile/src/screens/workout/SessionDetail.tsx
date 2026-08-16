@@ -4,17 +4,20 @@ import {
   Text,
   ScrollView,
   StyleSheet,
+  Alert,
+  TouchableOpacity,
 } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { Q } from '@nozbe/watermelondb';
 import { colors, spacing, typography } from '../../theme';
-import { Header } from '../../components/common';
+import { Header, Button } from '../../components/common';
 import { database } from '../../db';
 import WorkoutSession from '../../db/models/WorkoutSession';
 import ExerciseEntry from '../../db/models/ExerciseEntry';
 import Exercise from '../../db/models/Exercise';
 import Set from '../../db/models/Set';
 import { usePreferencesStore } from '../../stores/usePreferencesStore';
+import { useWorkoutStore } from '../../stores/useWorkoutStore';
 import { formatDuration } from './WorkoutHistory';
 
 export interface ExerciseEntryDetail {
@@ -168,6 +171,30 @@ export const SessionDetail: React.FC<SessionDetailProps> = ({
     // fallback
   }
 
+  const deleteSession = useWorkoutStore((s) => s.deleteSession);
+
+  const handleDeleteSession = () => {
+    if (!detail?.id) return;
+
+    Alert.alert(
+      'Delete Workout Session',
+      'Are you sure you want to permanently delete this workout session and all logged sets?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            await deleteSession(detail.id);
+            if (navigation?.goBack) {
+              navigation.goBack();
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const durationText = formatDuration(detail.startedAt, detail.finishedAt);
 
   return (
@@ -182,6 +209,10 @@ export const SessionDetail: React.FC<SessionDetailProps> = ({
               }
             : undefined
         }
+        rightAction={{
+          label: 'Delete',
+          onPress: handleDeleteSession,
+        }}
       />
 
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>

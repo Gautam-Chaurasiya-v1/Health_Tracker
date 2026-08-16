@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { colors, spacing, typography } from '../../theme';
 
 export interface SetRowData {
+  id?: string;
   setNumber: number;
   weight: number;
   reps: number;
@@ -13,9 +14,10 @@ export interface SetRowData {
 export interface SetRowProps {
   set: SetRowData;
   weightUnit?: 'kg' | 'lbs';
+  onDelete?: () => void;
 }
 
-export const SetRow: React.FC<SetRowProps> = ({ set, weightUnit = 'kg' }) => {
+export const SetRow: React.FC<SetRowProps> = ({ set, weightUnit = 'kg', onDelete }) => {
   return (
     <View testID={`set-row-${set.setNumber}`} style={styles.container}>
       <View style={styles.badge}>
@@ -28,6 +30,17 @@ export const SetRow: React.FC<SetRowProps> = ({ set, weightUnit = 'kg' }) => {
         </Text>
         {set.notes ? <Text style={styles.notesText}>{set.notes}</Text> : null}
       </View>
+
+      {onDelete && (
+        <TouchableOpacity
+          testID={`delete-set-${set.setNumber}-btn`}
+          style={styles.deleteButton}
+          onPress={onDelete}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.deleteText}>✕</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -71,5 +84,17 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.fontSizes.xs,
     marginTop: 2,
+  },
+  deleteButton: {
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: spacing.xs,
+  },
+  deleteText: {
+    color: colors.textMuted,
+    fontSize: typography.fontSizes.md,
+    fontWeight: typography.fontWeights.bold,
   },
 });

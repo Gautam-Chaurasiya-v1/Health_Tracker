@@ -25,8 +25,10 @@ export interface WorkoutState {
 
   startSession: (date?: string) => Promise<string>;
   finishSession: (sessionId: string) => Promise<void>;
+  deleteSession: (sessionId: string) => Promise<void>;
   addExerciseEntry: (sessionId: string, exerciseId: string) => Promise<string>;
   logSet: (entryId: string, exerciseId: string, data: SetData) => Promise<void>;
+  deleteSet: (setId: string, entryId: string, exerciseId: string) => Promise<void>;
   updateNotes: (sessionId: string, notes: string) => Promise<void>;
   setConditionTags: (sessionId: string, tags: WorkoutCondition[]) => Promise<void>;
   setActiveSessionId: (id: string | null) => void;
@@ -45,18 +47,18 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   setActiveExerciseEntryId: (id: string | null) => set({ activeExerciseEntryId: id }),
   setActiveExerciseId: (id: string | null) => set({ activeExerciseId: id }),
 
-  startSession: async (sessionDate?: string) => {
-    const todayIso = sessionDate || new Date().toISOString().split('T')[0];
+  startSession: async (date?: string) => {
+    const sessionDate = date || new Date().toISOString().split('T')[0];
     const clientUuid = uuid.v4().toString();
     const now = Date.now();
 
     let createdSessionId = '';
 
     await database.write(async () => {
-      const sessionCollection = database.collections.get<WorkoutSession>('workout_sessions');
+      const sessionCollection = database.get<WorkoutSession>('workout_sessions');
       const session = await sessionCollection.create((record: WorkoutSession) => {
         record.clientUuid = clientUuid;
-        record.date = todayIso;
+        record.date = sessionDate;
         record.startedAt = now;
         record.clientTimestamp = now;
       });
@@ -70,12 +72,38 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   finishSession: async (sessionId: string) => {
     const now = Date.now();
     await database.write(async () => {
-      const sessionCollection = database.collections.get<WorkoutSession>('workout_sessions');
+      const sessionCollection = database.get<WorkoutSession>('workout_sessions');
       const session = await sessionCollection.find(sessionId);
       await session.update((record: WorkoutSession) => {
         record.finishedAt = now;
         record.clientTimestamp = now;
       });
+    });
+
+    if (get().activeSessionId === sessionId) {
+      set({ activeSessionId: null, activeExerciseEntryId: null, activeExerciseId: null });
+    }
+  },
+
+  deleteSession: async (sessionId: string) => {
+    await database.write(async () => {
+      const sessionCollection = database.get<WorkoutSession>('workout_sessions');
+      const entriesCollection = database.get<ExerciseEntry>('exercise_entries');
+      const setsCollection = database.get<Set>('sets');
+
+      // Find all entries for this session
+      const entries = await entriesCollection.query(Q.where('session_id', sessionId)).fetch();
+
+      for (const entry of entries) {
+        const sets = await setsCollection.query(Q.where('entry_id', entry.id)).fetch();
+        for (const s of sets) {
+          await s.destroyPermanently();
+        }
+        await entry.destroyPermanently();
+      }
+
+      const session = await sessionCollection.find(sessionId);
+      await session.destroyPermanently();
     });
 
     if (get().activeSessionId === sessionId) {
@@ -90,7 +118,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     let createdEntryId = '';
 
     await database.write(async () => {
-      const entriesCollection = database.collections.get<ExerciseEntry>('exercise_entries');
+      const entriesCollection = database.get<ExerciseEntry>('exercise_entries');
       const existingEntries = await entriesCollection.query(Q.where('session_id', sessionId)).fetch();
       const orderIndex = existingEntries.length;
 
@@ -124,7 +152,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     const now = Date.now();
 
     await database.write(async () => {
-      const setsCollection = database.collections.get<Set>('sets');
+      const setsCollection = database.get<Set>('sets');
       const existingSets = await setsCollection.query(Q.where('entry_id', entryId)).fetch();
       const setNumber = existingSets.length + 1;
 
@@ -140,9 +168,9 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       });
 
       // Update Ghost Data Snapshot
-      const entriesCollection = database.collections.get<ExerciseEntry>('exercise_entries');
+      const entriesCollection = database.get<ExerciseEntry>('exercise_entries');
       const currentEntry = await entriesCollection.find(entryId);
-      const sessionCollection = database.collections.get<WorkoutSession>('workout_sessions');
+      const sessionCollection = database.get<WorkoutSession>('workout_sessions');
       const currentSession = await sessionCollection.find(currentEntry.sessionId);
       const sessionDate = currentSession.date;
 
@@ -167,7 +195,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       };
 
       // Ghost cache in WatermelonDB
-      const ghostCacheCollection = database.collections.get<ExerciseGhostCache>('exercise_ghost_cache');
+      const ghostCacheCollection = database.get<ExerciseGhostCache>('exercise_ghost_cache');
       const existingCache = await ghostCacheCollection.query(Q.where('exercise_id', exerciseId)).fetch();
 
       if (existingCache.length > 0) {
@@ -194,10 +222,66 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
     });
   },
 
+  deleteSet: async (setId: string, entryId: string, exerciseId: string) => {
+    const now = Date.now();
+    await database.write(async () => {
+      const setsCollection = database.get<Set>('sets');
+      const setRecord = await setsCollection.find(setId);
+      await setRecord.destroyPermanently();
+
+      // Re-index remaining sets
+      const remainingSets = await setsCollection.query(Q.where('entry_id', entryId)).fetch();
+      const sorted = remainingSets.sort((a, b) => a.setNumber - b.setNumber);
+
+      for (let i = 0; i < sorted.length; i++) {
+        if (sorted[i].setNumber !== i + 1) {
+          await sorted[i].update((r: Set) => {
+            r.setNumber = i + 1;
+          });
+        }
+      }
+
+      // Update Ghost Snapshot
+      const entriesCollection = database.get<ExerciseEntry>('exercise_entries');
+      const currentEntry = await entriesCollection.find(entryId);
+      const sessionCollection = database.get<WorkoutSession>('workout_sessions');
+      const currentSession = await sessionCollection.find(currentEntry.sessionId);
+      const sessionDate = currentSession.date;
+
+      const mappedSets = sorted.map((s, idx) => ({
+        setNumber: idx + 1,
+        weight: s.weight,
+        reps: s.reps,
+        rir: s.rir,
+      }));
+
+      const totalVolume = mappedSets.reduce((sum, s) => sum + s.weight * s.reps, 0);
+
+      const snapshot: GhostSnapshot = {
+        sessionDate,
+        sets: mappedSets,
+        totalVolume,
+      };
+
+      const ghostCacheCollection = database.get<ExerciseGhostCache>('exercise_ghost_cache');
+      const existingCache = await ghostCacheCollection.query(Q.where('exercise_id', exerciseId)).fetch();
+
+      if (existingCache.length > 0) {
+        const cached = existingCache[0];
+        await cached.update((record: ExerciseGhostCache) => {
+          record.setsSnapshot = JSON.stringify(mappedSets);
+          record.totalVolume = totalVolume;
+          record.updatedAt = now;
+        });
+      }
+      useGhostStore.getState().updateCache(exerciseId, snapshot);
+    });
+  },
+
   updateNotes: async (sessionId: string, notes: string) => {
     const now = Date.now();
     await database.write(async () => {
-      const sessionCollection = database.collections.get<WorkoutSession>('workout_sessions');
+      const sessionCollection = database.get<WorkoutSession>('workout_sessions');
       const session = await sessionCollection.find(sessionId);
       await session.update((record: WorkoutSession) => {
         record.notes = notes;
@@ -213,7 +297,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
 
     const now = Date.now();
     await database.write(async () => {
-      const sessionCollection = database.collections.get<WorkoutSession>('workout_sessions');
+      const sessionCollection = database.get<WorkoutSession>('workout_sessions');
       const session = await sessionCollection.find(sessionId);
       await session.update((record: WorkoutSession) => {
         record.conditionTags = JSON.stringify(tags);

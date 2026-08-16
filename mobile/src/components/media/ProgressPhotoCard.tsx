@@ -23,6 +23,7 @@ interface ProgressPhotoCardProps {
   isSelectionMode?: boolean;
   isSelected?: boolean;
   onPress: () => void;
+  onDelete?: () => void;
   testID?: string;
 }
 
@@ -33,6 +34,7 @@ export const ProgressPhotoCard: React.FC<ProgressPhotoCardProps> = ({
   isSelectionMode = false,
   isSelected = false,
   onPress,
+  onDelete,
   testID,
 }) => {
   const fullLocalUri = getFullMediaUri(media.local_uri);
@@ -72,10 +74,21 @@ export const ProgressPhotoCard: React.FC<ProgressPhotoCardProps> = ({
             </View>
           )}
 
-          {isSelectionMode && (
+          {isSelectionMode ? (
             <View style={[styles.selectCircle, isSelected && styles.selectCircleActive]}>
               {isSelected && <Text style={styles.checkmark}>✓</Text>}
             </View>
+          ) : (
+            onDelete && (
+              <TouchableOpacity
+                testID={`${testID ?? 'photo-card'}-delete-btn`}
+                style={styles.deleteCircle}
+                onPress={onDelete}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={styles.deleteIcon}>✕</Text>
+              </TouchableOpacity>
+            )
           )}
         </View>
 
@@ -161,6 +174,24 @@ const styles = StyleSheet.create({
   checkmark: {
     color: '#FFFFFF',
     fontSize: 12,
+    fontWeight: typography.fontWeights.bold,
+  },
+  deleteCircle: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteIcon: {
+    color: colors.danger,
+    fontSize: 11,
     fontWeight: typography.fontWeights.bold,
   },
   infoRow: {

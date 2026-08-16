@@ -114,6 +114,23 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ navigation }) 
     setIsModalVisible(false);
   };
 
+  const handleDeleteCustomExercise = (exercise: ExerciseCardData) => {
+    Alert.alert('Delete Exercise', `Are you sure you want to delete "${exercise.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await database.write(async () => {
+            const collection = database.get<Exercise>('exercises');
+            const exRecord = await collection.find(exercise.id);
+            await exRecord.destroyPermanently();
+          });
+        },
+      },
+    ]);
+  };
+
   return (
     <View testID="exercise-library-screen" style={styles.container}>
       <Header
@@ -177,7 +194,11 @@ export const ExerciseLibrary: React.FC<ExerciseLibraryProps> = ({ navigation }) 
           </View>
         }
         renderItem={({ item }) => (
-          <ExerciseCard exercise={item} onPress={() => handleSelectExercise(item)} />
+          <ExerciseCard
+            exercise={item}
+            onPress={() => handleSelectExercise(item)}
+            onDelete={item.isCustom ? () => handleDeleteCustomExercise(item) : undefined}
+          />
         )}
       />
 

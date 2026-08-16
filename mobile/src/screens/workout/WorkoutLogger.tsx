@@ -67,6 +67,8 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
     loadExercise();
   }, [activeExerciseId]);
 
+  const deleteSet = useWorkoutStore((s) => s.deleteSet);
+
   // Subscribe/load sets for active exercise entry
   useEffect(() => {
     if (!activeExerciseEntryId) {
@@ -74,13 +76,14 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
       return;
     }
 
-    const setsCollection = database.collections.get<Set>('sets');
+    const setsCollection = database.get<Set>('sets');
     const query = setsCollection.query(Q.where('entry_id', activeExerciseEntryId));
 
     const subscription = query.observe().subscribe((sets) => {
       const sorted = sets
         .sort((a, b) => a.setNumber - b.setNumber)
         .map((s) => ({
+          id: s.id,
           setNumber: s.setNumber,
           weight: s.weight,
           reps: s.reps,
@@ -106,6 +109,21 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
     } catch (err: any) {
       Alert.alert('Validation Error', err.message || 'Failed to log set');
     }
+  };
+
+  const handleDeleteSet = (setId?: string, setNum?: number) => {
+    if (!setId || !activeExerciseEntryId || !activeExerciseId) return;
+
+    Alert.alert('Delete Set', `Delete Set #${setNum} from this exercise?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteSet(setId, activeExerciseEntryId, activeExerciseId);
+        },
+      },
+    ]);
   };
 
   const handleToggleTag = async (tag: WorkoutCondition) => {
@@ -177,7 +195,12 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
             <Text style={styles.emptySetsText}>No sets logged yet for this exercise.</Text>
           ) : (
             loggedSets.map((s) => (
-              <SetRow key={s.setNumber} set={s} weightUnit={weightUnit as 'kg' | 'lbs'} />
+              <SetRow
+                key={s.id || s.setNumber}
+                set={s}
+                weightUnit={weightUnit as 'kg' | 'lbs'}
+                onDelete={() => handleDeleteSet(s.id, s.setNumber)}
+              />
             ))
           )}
         </View>

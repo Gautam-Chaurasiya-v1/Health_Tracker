@@ -51,6 +51,19 @@ export const ProgressTimeline: React.FC = () => {
     return mediaList.filter((m) => m.pose_type === poseFilter);
   }, [mediaList, poseFilter]);
 
+  const handleDeletePhoto = (photo: MediaRecordEntity) => {
+    Alert.alert('Delete Progress Photo', 'Are you sure you want to permanently delete this progress photo?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteMedia(photo.id);
+        },
+      },
+    ]);
+  };
+
   const handleCardPress = (media: MediaRecordEntity) => {
     if (isSelectionMode) {
       if (selectedPhotoIds.includes(media.id)) {
@@ -172,6 +185,7 @@ export const ProgressTimeline: React.FC = () => {
                 isSelectionMode={isSelectionMode}
                 isSelected={selectedPhotoIds.includes(item.id)}
                 onPress={() => handleCardPress(item)}
+                onDelete={!isSelectionMode ? () => handleDeletePhoto(item) : undefined}
               />
             )}
           />

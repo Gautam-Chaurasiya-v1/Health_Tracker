@@ -84,32 +84,47 @@ export const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   baseButton: {
-    height: 48,
-    borderRadius: spacing.borderRadius.md,
+    height: 50,
+    borderRadius: spacing.borderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
   },
   primaryButton: {
     backgroundColor: colors.primary,
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   secondaryButton: {
     backgroundColor: colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   dangerButton: {
     backgroundColor: colors.danger,
+    shadowColor: colors.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   ghostButton: {
     backgroundColor: 'transparent',
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderLight,
   },
   disabledButton: {
-    opacity: 0.5,
+    opacity: 0.4,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   baseText: {
     fontSize: typography.fontSizes.md,
     fontWeight: typography.fontWeights.semibold,
+    letterSpacing: 0.2,
   },
   primaryText: {
     color: '#FFFFFF',
@@ -121,7 +136,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   ghostText: {
-    color: colors.textSecondary,
+    color: colors.text,
   },
   disabledText: {
     color: colors.textMuted,

@@ -8,8 +8,9 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
+import { format, addDays, subDays, parseISO } from 'date-fns';
 import { colors, spacing, typography } from '../../theme';
-import { Header } from '../../components/common';
+import { Header, Button } from '../../components/common';
 import { GhostBanner } from '../../components/workout/GhostBanner';
 import { SetInputForm } from '../../components/workout/SetInputForm';
 import { SetRow, SetRowData } from '../../components/workout/SetRow';
@@ -29,6 +30,8 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
   const activeSessionId = useWorkoutStore((s) => s.activeSessionId);
   const activeExerciseEntryId = useWorkoutStore((s) => s.activeExerciseEntryId);
   const activeExerciseId = useWorkoutStore((s) => s.activeExerciseId);
+  const selectedDate = useWorkoutStore((s) => s.selectedDate);
+  const setSelectedDate = useWorkoutStore((s) => s.setSelectedDate);
   const startSession = useWorkoutStore((s) => s.startSession);
   const finishSession = useWorkoutStore((s) => s.finishSession);
   const logSet = useWorkoutStore((s) => s.logSet);
@@ -42,15 +45,13 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
   const [sessionNotes, setSessionNotes] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<WorkoutCondition[]>([]);
 
-  // Initialize session once on mount if none active
+  // Load session on mount for the selected date
   useEffect(() => {
-    async function initSession() {
-      if (!useWorkoutStore.getState().activeSessionId) {
-        await startSession();
-      }
+    async function init() {
+      await useWorkoutStore.getState().loadSessionForDate(selectedDate);
     }
-    initSession();
-  }, []);
+    init();
+  }, [selectedDate]);
 
   // Load exercise details
   useEffect(() => {
@@ -62,6 +63,8 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
         } catch (e) {
           setExerciseName('Custom Exercise');
         }
+      } else {
+        setExerciseName('Select Exercise');
       }
     }
     loadExercise();
@@ -97,6 +100,20 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
   }, [activeExerciseEntryId]);
 
   const lastSet = loggedSets.length > 0 ? loggedSets[loggedSets.length - 1] : null;
+
+  const handlePrevDay = async () => {
+    const prev = format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd');
+    await setSelectedDate(prev);
+  };
+
+  const handleNextDay = async () => {
+    const next = format(addDays(parseISO(selectedDate), 1), 'yyyy-MM-dd');
+    await setSelectedDate(next);
+  };
+
+  const handleStartWorkoutForDate = async () => {
+    await startSession(selectedDate);
+  };
 
   const handleLogSet = async (data: { weight: number; reps: number; rir: number }) => {
     if (!activeExerciseEntryId || !activeExerciseId) {
@@ -148,6 +165,11 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
     Alert.alert('Workout Finished!', 'Your session has been recorded.');
   };
 
+  const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
+  const formattedDateTitle = isToday
+    ? `Today, ${format(parseISO(selectedDate), 'MMM d')}`
+    : format(parseISO(selectedDate), 'EEE, MMM d, yyyy');
+
   const availableConditions = [
     { tag: WorkoutCondition.NORMAL, label: 'Normal' },
     { tag: WorkoutCondition.HIGH_ENERGY, label: 'High Energy' },
@@ -158,106 +180,161 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
 
   return (
     <View testID="workout-logger-screen" style={styles.container}>
-      <Header title="Workout Logger" />
+      <Header
+        title="Workout"
+        rightAction={{
+          label: 'History',
+          onPress: () => {
+            if (navigation && navigation.navigate) {
+              navigation.navigate('WorkoutHistory');
+            }
+          },
+        }}
+      />
+
+      {/* Date Header */}
+      <View style={styles.dateHeader}>
+        <TouchableOpacity
+          testID="prev-date-btn"
+          onPress={handlePrevDay}
+          style={styles.dateNavButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.dateNavArrow}>◀</Text>
+        </TouchableOpacity>
+
+        <Text testID="date-display" style={styles.dateTitle}>
+          {formattedDateTitle}
+        </Text>
+
+        <TouchableOpacity
+          testID="next-date-btn"
+          onPress={handleNextDay}
+          style={styles.dateNavButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.dateNavArrow}>▶</Text>
+        </TouchableOpacity>
+      </View>
 
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Exercise Header & Picker Button */}
-        <View style={styles.exerciseHeaderCard}>
-          <View>
-            <Text style={styles.exerciseLabel}>Current Exercise</Text>
-            <Text testID="current-exercise-title" style={styles.exerciseTitle}>
-              {exerciseName}
+        {!activeSessionId ? (
+          <View testID="no-workout-empty-state" style={styles.emptySessionCard}>
+            <Text style={styles.emptySessionIcon}>🏋️</Text>
+            <Text style={styles.emptySessionTitle}>No Workout Logged</Text>
+            <Text style={styles.emptySessionSubtitle}>
+              {isToday
+                ? 'Ready to train today? Start logging your exercises and sets!'
+                : `No training session was recorded on ${formattedDateTitle}.`}
             </Text>
+            <Button
+              testID="start-workout-for-date-btn"
+              title="Start Workout"
+              onPress={handleStartWorkoutForDate}
+              style={styles.startWorkoutBtn}
+            />
           </View>
-          <TouchableOpacity
-            testID="select-exercise-btn"
-            style={styles.changeExerciseBtn}
-            onPress={() => {
-              if (navigation && navigation.navigate) {
-                navigation.navigate('ExerciseLibrary');
-              }
-            }}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.changeExerciseBtnText}>
-              {activeExerciseEntryId ? 'Switch / Add' : '+ Select'}
-            </Text>
-          </TouchableOpacity>
-        </View>
+        ) : (
+          <>
+            {/* Exercise Header & Picker Button */}
+            <View style={styles.exerciseHeaderCard}>
+              <View>
+                <Text style={styles.exerciseLabel}>Current Exercise</Text>
+                <Text testID="current-exercise-title" style={styles.exerciseTitle}>
+                  {exerciseName}
+                </Text>
+              </View>
+              <TouchableOpacity
+                testID="select-exercise-btn"
+                style={styles.changeExerciseBtn}
+                onPress={() => {
+                  if (navigation && navigation.navigate) {
+                    navigation.navigate('ExerciseLibrary');
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.changeExerciseBtnText}>
+                  {activeExerciseEntryId ? 'Switch / Add' : '+ Select'}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-        {/* Real Ghost Banner Component */}
-        <GhostBanner exerciseId={activeExerciseId} weightUnit={weightUnit as 'kg' | 'lbs'} />
+            {/* Real Ghost Banner Component */}
+            <GhostBanner exerciseId={activeExerciseId} weightUnit={weightUnit as 'kg' | 'lbs'} />
 
-        {/* Logged Sets List */}
-        <View style={styles.setsSection}>
-          <Text style={styles.sectionHeader}>Logged Sets ({loggedSets.length})</Text>
-          {loggedSets.length === 0 ? (
-            <Text style={styles.emptySetsText}>No sets logged yet for this exercise.</Text>
-          ) : (
-            loggedSets.map((s) => (
-              <SetRow
-                key={s.id || s.setNumber}
-                set={s}
-                weightUnit={weightUnit as 'kg' | 'lbs'}
-                onDelete={() => handleDeleteSet(s.id, s.setNumber)}
+            {/* Logged Sets List */}
+            <View style={styles.setsSection}>
+              <Text style={styles.sectionHeader}>Logged Sets ({loggedSets.length})</Text>
+              {loggedSets.length === 0 ? (
+                <Text style={styles.emptySetsText}>No sets logged yet for this exercise.</Text>
+              ) : (
+                loggedSets.map((s) => (
+                  <SetRow
+                    key={s.id || s.setNumber}
+                    set={s}
+                    weightUnit={weightUnit as 'kg' | 'lbs'}
+                    onDelete={() => handleDeleteSet(s.id, s.setNumber)}
+                  />
+                ))
+              )}
+            </View>
+
+            {/* 3-Tap Set Input Form */}
+            <SetInputForm
+              previousSet={lastSet}
+              weightUnit={weightUnit as 'kg' | 'lbs'}
+              onConfirm={handleLogSet}
+            />
+
+            {/* Condition Tags Selector */}
+            <View style={styles.conditionSection}>
+              <Text style={styles.sectionHeader}>Session Condition Tags (Max 10)</Text>
+              <View style={styles.chipsRow}>
+                {availableConditions.map(({ tag, label }) => {
+                  const isSelected = selectedTags.includes(tag);
+                  return (
+                    <TouchableOpacity
+                      key={tag}
+                      testID={`condition-chip-${tag}`}
+                      style={[styles.chip, isSelected && styles.chipSelected]}
+                      onPress={() => handleToggleTag(tag)}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* Session Notes */}
+            <View style={styles.notesSection}>
+              <Text style={styles.sectionHeader}>Session Notes</Text>
+              <TextInput
+                testID="session-notes-input"
+                style={styles.notesInput}
+                placeholder="How did the session feel? Any pain or PRs?"
+                placeholderTextColor={colors.textMuted}
+                value={sessionNotes}
+                onChangeText={setSessionNotes}
+                multiline
               />
-            ))
-          )}
-        </View>
+            </View>
 
-        {/* 3-Tap Set Input Form */}
-        <SetInputForm
-          previousSet={lastSet}
-          weightUnit={weightUnit as 'kg' | 'lbs'}
-          onConfirm={handleLogSet}
-        />
-
-        {/* Condition Tags Selector */}
-        <View style={styles.conditionSection}>
-          <Text style={styles.sectionHeader}>Session Condition Tags (Max 10)</Text>
-          <View style={styles.chipsRow}>
-            {availableConditions.map(({ tag, label }) => {
-              const isSelected = selectedTags.includes(tag);
-              return (
-                <TouchableOpacity
-                  key={tag}
-                  testID={`condition-chip-${tag}`}
-                  style={[styles.chip, isSelected && styles.chipSelected]}
-                  onPress={() => handleToggleTag(tag)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>
-                    {label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Session Notes */}
-        <View style={styles.notesSection}>
-          <Text style={styles.sectionHeader}>Session Notes</Text>
-          <TextInput
-            testID="session-notes-input"
-            style={styles.notesInput}
-            placeholder="How did this workout feel?"
-            placeholderTextColor={colors.textMuted}
-            value={sessionNotes}
-            onChangeText={setSessionNotes}
-            multiline
-          />
-        </View>
-
-        {/* Finish Workout Button */}
-        <TouchableOpacity
-          testID="finish-workout-btn"
-          style={styles.finishButton}
-          onPress={handleFinish}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.finishButtonText}>Finish Workout</Text>
-        </TouchableOpacity>
+            {/* Finish Session Button */}
+            <TouchableOpacity
+              testID="finish-workout-btn"
+              style={styles.finishButton}
+              onPress={handleFinish}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.finishButtonText}>✓ Finish & Save Workout</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -267,6 +344,59 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  dateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dateNavButton: {
+    padding: spacing.xs,
+  },
+  dateNavArrow: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: typography.fontWeights.bold,
+  },
+  dateTitle: {
+    color: colors.text,
+    fontSize: typography.fontSizes.md,
+    fontWeight: typography.fontWeights.semibold,
+  },
+  emptySessionCard: {
+    backgroundColor: colors.surface,
+    borderRadius: spacing.borderRadius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptySessionIcon: {
+    fontSize: 48,
+    marginBottom: spacing.md,
+  },
+  emptySessionTitle: {
+    color: colors.text,
+    fontSize: typography.fontSizes.lg,
+    fontWeight: typography.fontWeights.bold,
+    marginBottom: spacing.xs,
+  },
+  emptySessionSubtitle: {
+    color: colors.textSecondary,
+    fontSize: typography.fontSizes.sm,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    lineHeight: 20,
+  },
+  startWorkoutBtn: {
+    width: '100%',
   },
   scrollContent: {
     flex: 1,
@@ -351,7 +481,7 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSizes.sm,
   },
   chipTextSelected: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontWeight: typography.fontWeights.bold,
   },
   notesSection: {
@@ -371,13 +501,18 @@ const styles = StyleSheet.create({
   finishButton: {
     backgroundColor: colors.danger,
     paddingVertical: spacing.md,
-    borderRadius: spacing.borderRadius.md,
+    borderRadius: spacing.borderRadius.lg,
     alignItems: 'center',
     marginTop: spacing.md,
     marginBottom: spacing.xxl,
+    shadowColor: colors.danger,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   finishButtonText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: typography.fontSizes.md,
     fontWeight: typography.fontWeights.bold,
   },

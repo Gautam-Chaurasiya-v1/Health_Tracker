@@ -78,12 +78,12 @@ export const GhostBanner: React.FC<GhostBannerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#1E293B',
+    backgroundColor: colors.surface,
     borderRadius: spacing.borderRadius.lg,
     padding: spacing.md,
     marginVertical: spacing.sm,
     borderWidth: 1,
-    borderColor: '#475569',
+    borderColor: colors.borderLight,
   },
   emptyContainer: {
     flexDirection: 'row',

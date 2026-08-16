@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   chipTextSelected: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontWeight: typography.fontWeights.bold,
   },
   listContent: {
@@ -364,13 +364,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 6,
-    shadowColor: '#000',
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
   },
   fabText: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontSize: 32,
     fontWeight: '300',
     marginTop: -2,
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   modalChipTextSelected: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontWeight: typography.fontWeights.bold,
   },
   modalActionRow: {
@@ -449,6 +449,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderRadius: spacing.borderRadius.md,
     backgroundColor: colors.surfaceHighlight,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   modalCancelBtnText: {
     color: colors.textSecondary,
@@ -461,7 +463,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   modalSaveBtnText: {
-    color: '#000000',
+    color: '#FFFFFF',
     fontSize: typography.fontSizes.sm,
     fontWeight: typography.fontWeights.bold,
   },

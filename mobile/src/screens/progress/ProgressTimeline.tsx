@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { format, addDays, subDays, parseISO } from 'date-fns';
 import { RootStackParamList } from '../../navigation/types';
 import { colors, spacing, typography } from '../../theme';
 import { Header, Card, Button } from '../../components/common';
@@ -37,6 +38,10 @@ export const ProgressTimeline: React.FC = () => {
   const setPoseFilter = useMediaStore((s) => s.setPoseFilter);
   const deleteMedia = useMediaStore((s) => s.deleteMedia);
 
+  const [selectedDate, setSelectedDate] = useState<string>(
+    format(new Date(), 'yyyy-MM-dd')
+  );
+  const [filterByDate, setFilterByDate] = useState<boolean>(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
 
@@ -45,11 +50,37 @@ export const ProgressTimeline: React.FC = () => {
   }, [loadMediaByContext]);
 
   const filteredPhotos = useMemo(() => {
-    if (poseFilter === 'all') {
-      return mediaList;
+    let list = mediaList;
+    if (poseFilter !== 'all') {
+      list = list.filter((m) => m.pose_type === poseFilter);
     }
-    return mediaList.filter((m) => m.pose_type === poseFilter);
-  }, [mediaList, poseFilter]);
+    if (filterByDate) {
+      list = list.filter((m) => {
+        const photoDate = format(new Date(m.created_at), 'yyyy-MM-dd');
+        return photoDate === selectedDate;
+      });
+    }
+    return list;
+  }, [mediaList, poseFilter, filterByDate, selectedDate]);
+
+  const handlePrevDay = () => {
+    const prev = format(subDays(parseISO(selectedDate), 1), 'yyyy-MM-dd');
+    setSelectedDate(prev);
+    setFilterByDate(true);
+  };
+
+  const handleNextDay = () => {
+    const next = format(addDays(parseISO(selectedDate), 1), 'yyyy-MM-dd');
+    setSelectedDate(next);
+    setFilterByDate(true);
+  };
+
+  const isToday = selectedDate === format(new Date(), 'yyyy-MM-dd');
+  const formattedDateTitle = !filterByDate
+    ? 'All Photos (Timeline)'
+    : isToday
+    ? `Today, ${format(parseISO(selectedDate), 'MMM d')}`
+    : format(parseISO(selectedDate), 'EEE, MMM d, yyyy');
 
   const handleDeletePhoto = (photo: MediaRecordEntity) => {
     Alert.alert('Delete Progress Photo', 'Are you sure you want to permanently delete this progress photo?', [
@@ -108,6 +139,36 @@ export const ProgressTimeline: React.FC = () => {
             : undefined
         }
       />
+
+      {/* Date Header */}
+      <View style={styles.dateHeader}>
+        <TouchableOpacity
+          testID="prev-date-btn"
+          onPress={handlePrevDay}
+          style={styles.dateNavButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.dateNavArrow}>◀</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => setFilterByDate(!filterByDate)}
+          activeOpacity={0.7}
+        >
+          <Text testID="date-display" style={styles.dateTitle}>
+            {formattedDateTitle}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          testID="next-date-btn"
+          onPress={handleNextDay}
+          style={styles.dateNavButton}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.dateNavArrow}>▶</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Filter Chips Bar */}
       <View style={styles.filterBar}>
@@ -199,6 +260,29 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  dateHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  dateNavButton: {
+    padding: spacing.xs,
+  },
+  dateNavArrow: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: typography.fontWeights.bold,
+  },
+  dateTitle: {
+    color: colors.text,
+    fontSize: typography.fontSizes.md,
+    fontWeight: typography.fontWeights.semibold,
   },
   filterBar: {
     backgroundColor: colors.surface,

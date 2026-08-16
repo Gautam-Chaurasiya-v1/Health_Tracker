@@ -21,8 +21,11 @@ export interface WorkoutState {
   activeSessionId: string | null;
   activeExerciseEntryId: string | null;
   activeExerciseId: string | null;
+  selectedDate: string;
   isLoading: boolean;
 
+  setSelectedDate: (date: string) => Promise<void>;
+  loadSessionForDate: (date: string) => Promise<WorkoutSession | null>;
   startSession: (date?: string) => Promise<string>;
   finishSession: (sessionId: string) => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
@@ -41,14 +44,60 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
   activeSessionId: null,
   activeExerciseEntryId: null,
   activeExerciseId: null,
+  selectedDate: new Date().toISOString().split('T')[0],
   isLoading: false,
+
+  setSelectedDate: async (date: string) => {
+    set({ selectedDate: date });
+    await get().loadSessionForDate(date);
+  },
+
+  loadSessionForDate: async (date: string) => {
+    set({ isLoading: true });
+    try {
+      const sessionCollection = database.get<WorkoutSession>('workout_sessions');
+      const sessions = await sessionCollection.query(Q.where('date', date)).fetch();
+
+      if (sessions.length > 0) {
+        // Pick the most recent session for this date
+        const session = sessions[sessions.length - 1];
+        set({ activeSessionId: session.id });
+
+        // Load active/first exercise entry if present
+        const entriesCollection = database.get<ExerciseEntry>('exercise_entries');
+        const entries = await entriesCollection
+          .query(Q.where('session_id', session.id), Q.sortBy('order_index', Q.asc))
+          .fetch();
+
+        if (entries.length > 0) {
+          const firstEntry = entries[0];
+          set({
+            activeExerciseEntryId: firstEntry.id,
+            activeExerciseId: firstEntry.exerciseId,
+          });
+        } else {
+          set({ activeExerciseEntryId: null, activeExerciseId: null });
+        }
+        return session;
+      } else {
+        set({
+          activeSessionId: null,
+          activeExerciseEntryId: null,
+          activeExerciseId: null,
+        });
+        return null;
+      }
+    } finally {
+      set({ isLoading: false });
+    }
+  },
 
   setActiveSessionId: (id: string | null) => set({ activeSessionId: id }),
   setActiveExerciseEntryId: (id: string | null) => set({ activeExerciseEntryId: id }),
   setActiveExerciseId: (id: string | null) => set({ activeExerciseId: id }),
 
   startSession: async (date?: string) => {
-    const sessionDate = date || new Date().toISOString().split('T')[0];
+    const sessionDate = date || get().selectedDate || new Date().toISOString().split('T')[0];
     const clientUuid = uuid.v4().toString();
     const now = Date.now();
 
@@ -65,7 +114,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       createdSessionId = session.id;
     });
 
-    set({ activeSessionId: createdSessionId });
+    set({ activeSessionId: createdSessionId, selectedDate: sessionDate });
     return createdSessionId;
   },
 
@@ -311,6 +360,7 @@ export const useWorkoutStore = create<WorkoutState>((set, get) => ({
       activeSessionId: null,
       activeExerciseEntryId: null,
       activeExerciseId: null,
+      selectedDate: new Date().toISOString().split('T')[0],
       isLoading: false,
     });
   },

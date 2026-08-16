@@ -1,0 +1,907 @@
+openapi: 3.1.0
+info:
+  title: GymTracker API
+  version: 1.0.0
+  description: |
+    Backend REST API for the GymTracker MVP.
+    All endpoints require JWT Bearer authentication unless marked [PUBLIC].
+    Base URL: https://api.gymtracker.app/v1
+
+servers:
+  - url: https://api.gymtracker.app/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Local development
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ─── Shared ───────────────────────────────────────────────
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:    { type: string, example: VALIDATION_ERROR }
+        message: { type: string, example: "RIR must be between 0 and 5" }
+        details: { type: object }
+
+    PaginatedMeta:
+      type: object
+      properties:
+        page:       { type: integer }
+        limit:      { type: integer }
+        total:      { type: integer }
+        totalPages: { type: integer }
+
+    # ─── Auth ─────────────────────────────────────────────────
+    RegisterRequest:
+      type: object
+      required: [email, password, displayName, weightUnit]
+      properties:
+        email:       { type: string, format: email }
+        password:    { type: string, minLength: 8 }
+        displayName: { type: string, minLength: 2, maxLength: 50 }
+        weightUnit:  { type: string, enum: [kg, lbs] }
+        bodyWeight:  { type: number, description: "Initial body weight for goal defaults" }
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:    { type: string, format: email }
+        password: { type: string }
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:  { type: string }
+        refreshToken: { type: string }
+        expiresIn:    { type: integer, description: "Seconds until access token expiry" }
+        user:
+          type: object
+          properties:
+            id:          { type: string, format: uuid }
+            email:       { type: string }
+            displayName: { type: string }
+            weightUnit:  { type: string, enum: [kg, lbs] }
+
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+
+    # ─── Exercises ────────────────────────────────────────────
+    Exercise:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        name:        { type: string, example: "Barbell Back Squat" }
+        muscleGroup: { type: string, example: "quads" }
+        equipment:   { type: string, example: "barbell" }
+        isCustom:    { type: boolean }
+        createdBy:   { type: string, format: uuid, nullable: true }
+
+    # ─── Sets ─────────────────────────────────────────────────
+    Set:
+      type: object
+      required: [clientUuid, weight, reps, rir, setNumber, clientTimestamp]
+      properties:
+        id:              { type: string, format: uuid }
+        clientUuid:      { type: string, format: uuid, description: "Client-generated UUID for idempotency" }
+        weight:          { type: number, minimum: 0, maximum: 1000 }
+        reps:            { type: integer, minimum: 1, maximum: 100 }
+        rir:             { type: integer, minimum: 0, maximum: 5 }
+        setNumber:       { type: integer, minimum: 1 }
+        notes:           { type: string, maxLength: 500, nullable: true }
+        clientTimestamp: { type: string, format: date-time }
+        syncStatus:      { type: string, enum: [pending, synced, failed] }
+
+    # ─── Workout Sessions ─────────────────────────────────────
+    WorkoutSession:
+      type: object
+      properties:
+        id:             { type: string, format: uuid }
+        clientUuid:     { type: string, format: uuid }
+        userId:         { type: string, format: uuid }
+        date:           { type: string, format: date }
+        startedAt:      { type: string, format: date-time }
+        finishedAt:     { type: string, format: date-time, nullable: true }
+        notes:          { type: string, maxLength: 2000, nullable: true }
+        conditionTags:  { type: array, items: { type: string }, maxItems: 10 }
+        exercises:
+          type: array
+          items: { $ref: '#/components/schemas/ExerciseEntry' }
+        syncStatus:     { type: string, enum: [pending, synced, failed] }
+
+    ExerciseEntry:
+      type: object
+      properties:
+        id:             { type: string, format: uuid }
+        clientUuid:     { type: string, format: uuid }
+        exerciseId:     { type: string, format: uuid }
+        exerciseName:   { type: string }
+        orderIndex:     { type: integer }
+        sets:
+          type: array
+          items: { $ref: '#/components/schemas/Set' }
+        ghostSnapshot:
+          $ref: '#/components/schemas/GhostSnapshot'
+
+    # ─── Ghost Data ───────────────────────────────────────────
+    GhostSnapshot:
+      type: object
+      nullable: true
+      properties:
+        sessionDate: { type: string, format: date }
+        sets:
+          type: array
+          items:
+            type: object
+            properties:
+              setNumber: { type: integer }
+              weight:    { type: number }
+              reps:      { type: integer }
+              rir:       { type: integer }
+        totalVolume: { type: number, description: "Sum of weight × reps across all sets" }
+
+    # ─── Diet ─────────────────────────────────────────────────
+    DietLog:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        userId:      { type: string, format: uuid }
+        date:        { type: string, format: date }
+        bodyWeight:  { type: number, nullable: true }
+        weightUnit:  { type: string, enum: [kg, lbs] }
+        macroGoals:
+          $ref: '#/components/schemas/MacroGoals'
+        meals:
+          type: array
+          items: { $ref: '#/components/schemas/MealEntry' }
+        progressMedia:
+          type: array
+          items: { $ref: '#/components/schemas/MediaRecord' }
+
+    MacroGoals:
+      type: object
+      properties:
+        protein_g:  { type: integer, minimum: 0 }
+        carbs_g:    { type: integer, minimum: 0 }
+        fat_g:      { type: integer, minimum: 0 }
+        calories:   { type: integer, minimum: 0 }
+
+    MealEntry:
+      type: object
+      required: [clientUuid, label, protein_g, carbs_g, fat_g, calories]
+      properties:
+        id:            { type: string, format: uuid }
+        clientUuid:    { type: string, format: uuid }
+        label:         { type: string, maxLength: 200, example: "Post-workout shake" }
+        protein_g:     { type: number, minimum: 0 }
+        carbs_g:       { type: number, minimum: 0 }
+        fat_g:         { type: number, minimum: 0 }
+        calories:      { type: number, minimum: 0 }
+        conditionTag:  { type: string, enum: [bloated, high_energy, sluggish, brain_fog, neutral], nullable: true }
+        mealPhotoId:   { type: string, format: uuid, nullable: true }
+        loggedAt:      { type: string, format: date-time }
+        clientTimestamp: { type: string, format: date-time }
+
+    # ─── Media ────────────────────────────────────────────────
+    MediaRecord:
+      type: object
+      properties:
+        id:          { type: string, format: uuid }
+        clientUuid:  { type: string, format: uuid }
+        mediaType:   { type: string, enum: [photo, video] }
+        context:     { type: string, enum: [workout, exercise, diet_progress, meal] }
+        localUri:    { type: string, nullable: true }
+        remoteUrl:   { type: string, format: uri, nullable: true }
+        syncStatus:  { type: string, enum: [pending, uploaded, failed] }
+        fileSizeBytes: { type: integer }
+        durationSec: { type: integer, nullable: true, description: "Videos only" }
+        poseType:    { type: string, enum: [front, side, back, scan], nullable: true }
+        createdAt:   { type: string, format: date-time }
+
+    UploadUrlResponse:
+      type: object
+      properties:
+        mediaId:     { type: string, format: uuid }
+        uploadUrl:   { type: string, format: uri, description: "Pre-signed R2 URL, valid 15 minutes" }
+        expiresAt:   { type: string, format: date-time }
+
+    # ─── Sync ─────────────────────────────────────────────────
+    SyncPushRequest:
+      type: object
+      properties:
+        workoutSessions:
+          type: array
+          items: { $ref: '#/components/schemas/WorkoutSession' }
+        dietLogs:
+          type: array
+          items: { $ref: '#/components/schemas/DietLog' }
+        mediaRecords:
+          type: array
+          items: { $ref: '#/components/schemas/MediaRecord' }
+        lastSyncAt: { type: string, format: date-time, nullable: true }
+
+    SyncPushResponse:
+      type: object
+      properties:
+        accepted:
+          type: array
+          items: { type: string, format: uuid }
+          description: "clientUuids accepted without conflict"
+        conflicts:
+          type: array
+          items:
+            type: object
+            properties:
+              clientUuid:      { type: string, format: uuid }
+              conflictType:    { type: string, enum: [duplicate, stale_update] }
+              serverVersion:   { type: object }
+        syncedAt: { type: string, format: date-time }
+
+    SyncPullResponse:
+      type: object
+      properties:
+        workoutSessions: { type: array, items: { $ref: '#/components/schemas/WorkoutSession' } }
+        dietLogs:        { type: array, items: { $ref: '#/components/schemas/DietLog' } }
+        ghostCache:
+          type: array
+          items:
+            type: object
+            properties:
+              exerciseId: { type: string, format: uuid }
+              snapshot:   { $ref: '#/components/schemas/GhostSnapshot' }
+        serverTime: { type: string, format: date-time }
+
+    # ─── Calendar ─────────────────────────────────────────────
+    WeeklyPlan:
+      type: object
+      properties:
+        id:   { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        days:
+          type: array
+          items:
+            type: object
+            properties:
+              dayOfWeek:   { type: integer, minimum: 0, maximum: 6, description: "0=Sunday" }
+              label:       { type: string, example: "Push Day" }
+              exerciseIds: { type: array, items: { type: string, format: uuid } }
+
+security:
+  - BearerAuth: []
+
+paths:
+  # ════════════════════════════════════════════════════════════
+  # AUTH
+  # ════════════════════════════════════════════════════════════
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user [PUBLIC]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { code: EMAIL_EXISTS, message: "An account with this email already exists" }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login [PUBLIC]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { code: INVALID_CREDENTIALS, message: "Email or password is incorrect" }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token [PUBLIC]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { code: TOKEN_EXPIRED, message: "Refresh token is invalid or expired" }
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout and invalidate refresh token
+      responses:
+        '204': { description: No content }
+
+  # ════════════════════════════════════════════════════════════
+  # EXERCISES
+  # ════════════════════════════════════════════════════════════
+  /exercises:
+    get:
+      tags: [Exercises]
+      summary: List exercises (paginated, searchable)
+      parameters:
+        - in: query
+          name: search
+          schema: { type: string }
+        - in: query
+          name: muscleGroup
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/Exercise' } }
+                  meta: { $ref: '#/components/schemas/PaginatedMeta' }
+
+    post:
+      tags: [Exercises]
+      summary: Create a custom exercise
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, muscleGroup]
+              properties:
+                name:        { type: string }
+                muscleGroup: { type: string }
+                equipment:   { type: string }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Exercise' }
+
+  # ════════════════════════════════════════════════════════════
+  # GHOST DATA
+  # ════════════════════════════════════════════════════════════
+  /exercises/{exerciseId}/ghost:
+    get:
+      tags: [Ghost Data]
+      summary: Get previous session snapshot for an exercise
+      description: |
+        Returns the pre-computed ghost snapshot for the (userId, exerciseId) pair.
+        Served from a denormalized cache table — must return < 100ms.
+      parameters:
+        - in: path
+          name: exerciseId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Ghost data found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GhostSnapshot' }
+        '204':
+          description: No previous session for this exercise
+
+  # ════════════════════════════════════════════════════════════
+  # WORKOUT SESSIONS
+  # ════════════════════════════════════════════════════════════
+  /workouts:
+    get:
+      tags: [Workouts]
+      summary: List workout sessions (paginated)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 10, maximum: 50 }
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/WorkoutSession' } }
+                  meta: { $ref: '#/components/schemas/PaginatedMeta' }
+
+    post:
+      tags: [Workouts]
+      summary: Create a new workout session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WorkoutSession' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkoutSession' }
+        '409':
+          description: Duplicate clientUuid
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { code: DUPLICATE_CLIENT_UUID, message: "A session with this clientUuid already exists" }
+
+  /workouts/{sessionId}:
+    get:
+      tags: [Workouts]
+      summary: Get a workout session by ID
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkoutSession' }
+        '404':
+          description: Not found
+
+    patch:
+      tags: [Workouts]
+      summary: Update session metadata (notes, conditionTags, finishedAt)
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:         { type: string }
+                conditionTags: { type: array, items: { type: string } }
+                finishedAt:    { type: string, format: date-time }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkoutSession' }
+
+  /workouts/{sessionId}/exercises/{entryId}/sets:
+    post:
+      tags: [Workouts]
+      summary: Log a set to an exercise entry
+      description: |
+        Idempotent via clientUuid — safe to retry on network failure.
+        After successful insert, server updates the ghost cache for (userId, exerciseId).
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string, format: uuid }
+        - in: path
+          name: entryId
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Set' }
+      responses:
+        '201':
+          description: Set logged
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Set' }
+        '409':
+          description: Duplicate clientUuid (idempotent — returns existing set)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Set' }
+        '422':
+          description: Validation error (e.g., RIR out of range)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  # ════════════════════════════════════════════════════════════
+  # DIET
+  # ════════════════════════════════════════════════════════════
+  /diet/logs:
+    get:
+      tags: [Diet]
+      summary: Get diet logs for a date range
+      parameters:
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/DietLog' } }
+
+  /diet/logs/{date}:
+    get:
+      tags: [Diet]
+      summary: Get diet log for a specific date (YYYY-MM-DD)
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DietLog' }
+        '404':
+          description: No log for this date
+
+    put:
+      tags: [Diet]
+      summary: Upsert the diet log for a date
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DietLog' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DietLog' }
+
+  /diet/logs/{date}/meals:
+    post:
+      tags: [Diet]
+      summary: Add a meal entry to a diet log
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MealEntry' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MealEntry' }
+
+  /diet/goals:
+    get:
+      tags: [Diet]
+      summary: Get user's macro goals
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MacroGoals' }
+    put:
+      tags: [Diet]
+      summary: Update user's macro goals
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MacroGoals' }
+      responses:
+        '200':
+          description: Updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MacroGoals' }
+
+  # ════════════════════════════════════════════════════════════
+  # MEDIA
+  # ════════════════════════════════════════════════════════════
+  /media/upload-url:
+    post:
+      tags: [Media]
+      summary: Request a presigned R2 upload URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientUuid, mediaType, context, fileSizeBytes, mimeType]
+              properties:
+                clientUuid:    { type: string, format: uuid }
+                mediaType:     { type: string, enum: [photo, video] }
+                context:       { type: string, enum: [workout, exercise, diet_progress, meal] }
+                fileSizeBytes: { type: integer }
+                mimeType:      { type: string, example: "image/jpeg" }
+                poseType:      { type: string, enum: [front, side, back, scan], nullable: true }
+                durationSec:   { type: integer, nullable: true }
+      responses:
+        '200':
+          description: Presigned URL generated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UploadUrlResponse' }
+        '422':
+          description: File size or type validation failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+              example: { code: FILE_TOO_LARGE, message: "Photo must be ≤ 10MB" }
+
+  /media/{mediaId}/confirm:
+    patch:
+      tags: [Media]
+      summary: Confirm a media upload is complete
+      description: Called by the client after a successful PUT to the R2 presigned URL.
+      parameters:
+        - in: path
+          name: mediaId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Media record updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MediaRecord' }
+
+  /media/{mediaId}:
+    delete:
+      tags: [Media]
+      summary: Delete a media record and its R2 object
+      parameters:
+        - in: path
+          name: mediaId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '204': { description: Deleted }
+        '404': { description: Not found }
+
+  /diet/logs/{date}/progress-media:
+    get:
+      tags: [Media, Diet]
+      summary: Get progress photos/videos for a specific date
+      parameters:
+        - in: path
+          name: date
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/MediaRecord' }
+
+  /progress-timeline:
+    get:
+      tags: [Media, Diet]
+      summary: Get paginated progress media timeline
+      parameters:
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+        - in: query
+          name: mediaType
+          schema: { type: string, enum: [photo, video] }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: '#/components/schemas/MediaRecord' } }
+                  meta: { $ref: '#/components/schemas/PaginatedMeta' }
+
+  # ════════════════════════════════════════════════════════════
+  # SYNC
+  # ════════════════════════════════════════════════════════════
+  /sync/push:
+    post:
+      tags: [Sync]
+      summary: Push local changes to server
+      description: |
+        Batch push of all pending local records.
+        Idempotent via clientUuid — safe to call multiple times.
+        Server applies changes by clientTimestamp, newest wins.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SyncPushRequest' }
+      responses:
+        '200':
+          description: Sync result
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncPushResponse' }
+
+  /sync/pull:
+    get:
+      tags: [Sync]
+      summary: Pull server changes since last sync
+      parameters:
+        - in: query
+          name: since
+          required: true
+          schema: { type: string, format: date-time }
+          description: Pull all records modified after this timestamp
+      responses:
+        '200':
+          description: Server changes
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SyncPullResponse' }
+
+  # ════════════════════════════════════════════════════════════
+  # WEEKLY PLAN & CALENDAR
+  # ════════════════════════════════════════════════════════════
+  /weekly-plan:
+    get:
+      tags: [Calendar]
+      summary: Get user's current weekly training plan
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyPlan' }
+    put:
+      tags: [Calendar]
+      summary: Upsert weekly training plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WeeklyPlan' }
+      responses:
+        '200':
+          description: Updated, calendar sync job enqueued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyPlan' }
+
+  /calendar/auth:
+    post:
+      tags: [Calendar]
+      summary: Initiate Google Calendar OAuth flow
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [authCode]
+              properties:
+                authCode: { type: string, description: "Authorization code from Google OAuth consent screen" }
+      responses:
+        '200':
+          description: Calendar connected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:   { type: boolean }
+                  calendarId:  { type: string }
+                  syncedAt:    { type: string, format: date-time }
+
+  /calendar/disconnect:
+    post:
+      tags: [Calendar]
+      summary: Disconnect Google Calendar and revoke tokens
+      responses:
+        '204': { description: Disconnected }
+
+  /calendar/sync-status:
+    get:
+      tags: [Calendar]
+      summary: Get current calendar sync status
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  connected:   { type: boolean }
+                  lastSyncAt:  { type: string, format: date-time, nullable: true }
+                  syncStatus:  { type: string, enum: [idle, syncing, failed] }
+                  errorMessage: { type: string, nullable: true }

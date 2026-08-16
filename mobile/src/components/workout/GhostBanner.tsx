@@ -10,7 +10,8 @@ export interface GhostBannerProps {
   currentDate?: Date; // For testing relative date calculations
 }
 
-export function formatSessionDate(isoDate: string, baseDate: Date = new Date()): string {
+export function formatSessionDate(isoDate?: string, baseDate: Date = new Date()): string {
+  if (!isoDate) return 'Previous Session';
   try {
     const parsed = parseISO(isoDate);
     const diff = differenceInCalendarDays(baseDate, parsed);

@@ -49,4 +49,24 @@ describe('ProgressPhotoCard', () => {
 
     expect(getByText('✓')).toBeTruthy();
   });
+
+  it('triggers onDelete when delete button is pressed', () => {
+    const handleDelete = jest.fn();
+    const { getByTestId } = render(
+      <ProgressPhotoCard
+        media={mockPhoto}
+        isSelectionMode={false}
+        onPress={() => {}}
+        onDelete={handleDelete}
+        testID="custom-card"
+      />
+    );
+
+    const deleteBtn = getByTestId('custom-card-delete-btn');
+    expect(deleteBtn).toBeTruthy();
+
+    fireEvent.press(deleteBtn);
+    expect(handleDelete).toHaveBeenCalledTimes(1);
+  });
 });
+

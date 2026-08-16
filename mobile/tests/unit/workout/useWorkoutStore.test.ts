@@ -122,4 +122,47 @@ describe('useWorkoutStore', () => {
       'Maximum 10 condition tags allowed'
     );
   });
+
+  it('deleteSet() removes the set and re-indexes remaining sets', async () => {
+    const sessionId = await useWorkoutStore.getState().startSession('2026-08-17');
+    const entryId = await useWorkoutStore.getState().addExerciseEntry(sessionId, 'ex-delete-test');
+
+    await useWorkoutStore.getState().logSet(entryId, 'ex-delete-test', { weight: 80, reps: 10, rir: 2 });
+    await useWorkoutStore.getState().logSet(entryId, 'ex-delete-test', { weight: 85, reps: 8, rir: 1 });
+    await useWorkoutStore.getState().logSet(entryId, 'ex-delete-test', { weight: 90, reps: 6, rir: 0 });
+
+    const setsBefore = await database.get<Set>('sets').query().fetch();
+    const entrySets = setsBefore.filter((s) => s.entryId === entryId);
+    expect(entrySets.length).toBe(3);
+
+    // Delete set #2 (index 1)
+    const set2 = entrySets.find((s) => s.setNumber === 2);
+    expect(set2).toBeDefined();
+
+    await useWorkoutStore.getState().deleteSet(set2!.id, entryId, 'ex-delete-test');
+
+    const setsAfter = await database.get<Set>('sets').query().fetch();
+    const remaining = setsAfter.filter((s) => s.entryId === entryId).sort((a, b) => a.setNumber - b.setNumber);
+
+    expect(remaining.length).toBe(2);
+    expect(remaining[0].setNumber).toBe(1);
+    expect(remaining[0].weight).toBe(80);
+    expect(remaining[1].setNumber).toBe(2); // re-indexed from 3 to 2
+    expect(remaining[1].weight).toBe(90);
+  });
+
+  it('deleteSession() removes the session and cascade-deletes entries and sets', async () => {
+    const sessionId = await useWorkoutStore.getState().startSession('2026-08-17');
+    const entryId = await useWorkoutStore.getState().addExerciseEntry(sessionId, 'ex-session-delete');
+    await useWorkoutStore.getState().logSet(entryId, 'ex-session-delete', { weight: 100, reps: 5, rir: 2 });
+
+    await useWorkoutStore.getState().deleteSession(sessionId);
+
+    const sessionExists = await database.get<WorkoutSession>('workout_sessions').query().fetch();
+    expect(sessionExists.find((s) => s.id === sessionId)).toBeUndefined();
+
+    const entryExists = await database.get<ExerciseEntry>('exercise_entries').query().fetch();
+    expect(entryExists.find((e) => e.id === entryId)).toBeUndefined();
+  });
 });
+

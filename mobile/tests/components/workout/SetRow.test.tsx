@@ -41,4 +41,26 @@ describe('SetRow Component', () => {
     const { getByText } = render(<SetRow set={set} weightUnit="kg" />);
     expect(getByText('Felt light, push next week')).toBeTruthy();
   });
+
+  it('renders delete button and triggers onDelete when tapped', () => {
+    const set = {
+      setNumber: 1,
+      weight: 100,
+      reps: 8,
+      rir: 2,
+    };
+    const onDeleteMock = jest.fn();
+
+    const { getByTestId } = render(
+      <SetRow set={set} weightUnit="kg" onDelete={onDeleteMock} />
+    );
+
+    const deleteBtn = getByTestId('delete-set-1-btn');
+    expect(deleteBtn).toBeTruthy();
+
+    const { fireEvent } = require('@testing-library/react-native');
+    fireEvent.press(deleteBtn);
+    expect(onDeleteMock).toHaveBeenCalledTimes(1);
+  });
 });
+

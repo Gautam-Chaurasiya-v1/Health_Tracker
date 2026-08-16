@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { colors, spacing, typography } from '../../theme';
 import { Header } from '../../components/common';
+import { GhostBanner } from '../../components/workout/GhostBanner';
 import { SetInputForm } from '../../components/workout/SetInputForm';
 import { SetRow, SetRowData } from '../../components/workout/SetRow';
 import { useWorkoutStore } from '../../stores/useWorkoutStore';
@@ -166,8 +167,8 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
 
-        {/* Ghost Banner Placeholder (STUB for F1, real component in F2) */}
-        <View testID="ghost-banner-container" />
+        {/* Real Ghost Banner Component */}
+        <GhostBanner exerciseId={activeExerciseId} weightUnit={weightUnit as 'kg' | 'lbs'} />
 
         {/* Logged Sets List */}
         <View style={styles.setsSection}>

@@ -16,6 +16,7 @@ export interface UserPreferencesEntity {
 export interface DietLogEntity {
   id: string;
   server_id?: string | null;
+  serverId?: string | null;
   date: string; // ISO date string YYYY-MM-DD
   body_weight?: number | null;
   weight_unit?: WeightUnit | null;

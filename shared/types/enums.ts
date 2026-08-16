@@ -12,6 +12,12 @@ export enum WorkoutCondition {
   JointPain = 'joint_pain',
   PoorSleep = 'poor_sleep',
   Normal = 'normal',
+
+  HIGH_ENERGY = 'high_energy',
+  FATIGUED = 'fatigued',
+  JOINT_PAIN = 'joint_pain',
+  POOR_SLEEP = 'poor_sleep',
+  NORMAL = 'normal',
 }
 
 export enum PoseType {
@@ -24,6 +30,8 @@ export enum PoseType {
 export enum WeightUnit {
   Kg = 'kg',
   Lbs = 'lbs',
+  KG = 'kg',
+  LBS = 'lbs',
 }
 
 export enum MediaContext {

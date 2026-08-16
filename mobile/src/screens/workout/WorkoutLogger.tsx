@@ -42,15 +42,15 @@ export const WorkoutLogger: React.FC<WorkoutLoggerProps> = ({ navigation }) => {
   const [sessionNotes, setSessionNotes] = useState<string>('');
   const [selectedTags, setSelectedTags] = useState<WorkoutCondition[]>([]);
 
-  // Initialize session if none active
+  // Initialize session once on mount if none active
   useEffect(() => {
     async function initSession() {
-      if (!activeSessionId) {
+      if (!useWorkoutStore.getState().activeSessionId) {
         await startSession();
       }
     }
     initSession();
-  }, [activeSessionId, startSession]);
+  }, []);
 
   // Load exercise details
   useEffect(() => {

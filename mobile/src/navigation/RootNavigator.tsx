@@ -6,6 +6,9 @@ import { OnboardingScreen } from '../screens/onboarding/OnboardingScreen';
 import { TabNavigator } from './TabNavigator';
 import { ProgressComparison } from '../screens/progress/ProgressComparison';
 import { MealEditorModal } from '../screens/diet/MealEditorModal';
+import { ExerciseLibrary } from '../screens/workout/ExerciseLibrary';
+import { WorkoutHistory } from '../screens/workout/WorkoutHistory';
+import { SessionDetail } from '../screens/workout/SessionDetail';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -39,6 +42,9 @@ export const RootNavigator: React.FC<RootNavigatorProps> = ({ initialRoute }) =>
           headerShown: false,
         }}
       />
+      <Stack.Screen name="ExerciseLibrary" component={ExerciseLibrary} />
+      <Stack.Screen name="WorkoutHistory" component={WorkoutHistory} />
+      <Stack.Screen name="SessionDetail" component={SessionDetail} />
     </Stack.Navigator>
   );
 };

@@ -4,7 +4,7 @@ import { Text } from 'react-native';
 import { MainTabParamList } from './types';
 import { colors, typography } from '../theme';
 
-import { WorkoutStubScreen } from '../screens/workout/WorkoutStubScreen';
+import { WorkoutLogger } from '../screens/workout/WorkoutLogger';
 import { DietLog } from '../screens/diet/DietLog';
 import { ProgressTimeline } from '../screens/progress/ProgressTimeline';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
@@ -33,7 +33,7 @@ export const TabNavigator: React.FC = () => {
     >
       <Tab.Screen
         name="WorkoutTab"
-        component={WorkoutStubScreen}
+        component={WorkoutLogger}
         options={{
           tabBarLabel: 'Workout',
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 18 }}>🏋️</Text>,

@@ -5,6 +5,9 @@ export type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList>;
   ProgressComparison: { photoAId: string; photoBId: string };
   MealEditor: { mealId?: string; dietLogId: string };
+  ExerciseLibrary: undefined;
+  WorkoutHistory: undefined;
+  SessionDetail: { sessionId: string };
 };
 
 export type MainTabParamList = {

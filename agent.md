@@ -177,3 +177,16 @@ Every PR must include in its description:
 > 2. **Run Full Test Suite**: Ensure all unit and integration tests are 100% passing (`npm test`).
 > 3. **Commit and Sync**: Commit with conventional prefix (`fix(devb): ...` / `fix(deva): ...` / `docs: ...`) and sync to the main development branch.
 
+---
+
+## 12. Strict Test-Driven Development (TDD) Rule
+
+> [!IMPORTANT]
+> **Strict TDD Mandate for All Features & Bug Fixes**
+> Whenever developing any new feature, enhancement, or resolving bug fixes:
+> 1. **Write Tests First (Red)**: Author unit and component tests specifying expected behaviors, input validations, edge cases, and failure states before or alongside the implementation.
+> 2. **Implement & Pass (Green)**: Implement the solution until all newly created and existing tests pass cleanly.
+> 3. **Refactor & Verify (Refactor)**: Refactor code for readability and performance while maintaining 100% passing test coverage (`npm test`).
+> 4. **Mandatory Coverage**: Every new store action, calculation, state transition, boundary condition, and interactive UI component must have dedicated test coverage before PR submission.
+
+

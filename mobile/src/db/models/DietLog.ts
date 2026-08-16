@@ -9,11 +9,17 @@ export default class DietLog extends Model {
     media_records: { type: 'has_many' as const, foreignKey: 'diet_log_id' },
   };
 
+  // @ts-ignore
   @field('server_id') serverId?: string;
-  @text('date') date!: string; // ISO date YYYY-MM-DD
+  // @ts-ignore
+  @text('date') date: string; // ISO date YYYY-MM-DD
+  // @ts-ignore
   @field('body_weight') bodyWeight?: number;
+  // @ts-ignore
   @field('weight_unit') weightUnit?: 'kg' | 'lbs';
 
-  @children('meal_entries') mealEntries!: any;
-  @children('media_records') mediaRecords!: any;
+  // @ts-ignore
+  @children('meal_entries') mealEntries: any;
+  // @ts-ignore
+  @children('media_records') mediaRecords: any;
 }
